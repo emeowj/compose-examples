@@ -2,6 +2,15 @@
 <project version="4">
   <component name="deploymentTargetDropDown">
     <value>
+      <entry key="NowPlayingWidgetPreview">
+        <State />
+      </entry>
+      <entry key="SpeedControlExamplePreview">
+        <State />
+      </entry>
+      <entry key="SpeedControl_setup_preview">
+        <State />
+      </entry>
       <entry key="app">
         <State>
           <targetSelectedWithDropDown>
@@ -17,6 +26,9 @@
           </targetSelectedWithDropDown>
           <timeTargetWasSelectedWithDropDown value="2024-04-13T23:16:56.373779Z" />
         </State>
+      </entry>
+      <entry key="widget">
+        <State />
       </entry>
     </value>
   </component>
