@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package dev.xiaoming.compose.example
 
 import android.os.Bundle
@@ -12,6 +14,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -27,11 +36,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.xiaoming.compose.example.speedcontrol.SpeedControl
 import dev.xiaoming.compose.example.ui.theme.ComposeexamplesTheme
+import dev.xiaoming.compose.example.ui.theme.Padding
 
 enum class ExampleItem(val title: String, val composable: @Composable () -> Unit) {
   SPEED_CONTROL(
     title = "Speed Control",
-    composable = { SpeedControl() })
+    composable = { SpeedControl(modifier = Modifier.padding(vertical = Padding.large)) })
 }
 
 class MainActivity : ComponentActivity() {
@@ -59,7 +69,9 @@ class MainActivity : ComponentActivity() {
             val item = navBackStackEntry.arguments?.getString("item")?.let {
               ExampleItem.valueOf(it)
             }
-            ExampleScreen(item = item!!)
+            ExampleScreen(item = item!!) {
+              navController.navigateUp()
+            }
           }
         }
       }
@@ -69,8 +81,20 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun MainScreen(navHostController: NavHostController) {
-  Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+  Scaffold(
+    modifier = Modifier.fillMaxSize(),
+    topBar = {
+      CenterAlignedTopAppBar(
+        title = {
+          Text(text = "Compose Examples", style = MaterialTheme.typography.titleMedium)
+        }
+      )
+    }
+  ) { innerPadding ->
     LazyColumn(contentPadding = innerPadding) {
+      item {
+        HorizontalDivider()
+      }
       items(items = ExampleItem.entries) { item ->
         ListItem(
           headlineContent = {
@@ -80,14 +104,32 @@ private fun MainScreen(navHostController: NavHostController) {
             navHostController.navigate(route = "example/$item")
           }
         )
+        HorizontalDivider()
       }
     }
   }
 }
 
 @Composable
-private fun ExampleScreen(item: ExampleItem) {
-  Scaffold(modifier = Modifier.fillMaxSize()) { contentPadding ->
+private fun ExampleScreen(item: ExampleItem, navBack: () -> Unit) {
+  Scaffold(
+    modifier = Modifier.fillMaxSize(),
+    topBar = {
+      CenterAlignedTopAppBar(
+        title = {
+          Text(item.title, style = MaterialTheme.typography.titleMedium)
+        },
+        navigationIcon = {
+          IconButton(onClick = navBack) {
+            Icon(
+              imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+              contentDescription = "Nav Back"
+            )
+          }
+        }
+      )
+    }
+  ) { contentPadding ->
     Box(modifier = Modifier.padding(contentPadding)) {
       item.composable()
     }
@@ -99,5 +141,13 @@ private fun ExampleScreen(item: ExampleItem) {
 private fun MainScreenPreview() {
   ComposeexamplesTheme {
     MainScreen(navHostController = rememberNavController())
+  }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ExampleScreenPreview() {
+  ComposeexamplesTheme {
+    ExampleScreen(ExampleItem.SPEED_CONTROL) { }
   }
 }
