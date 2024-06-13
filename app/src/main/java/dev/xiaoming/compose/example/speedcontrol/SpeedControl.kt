@@ -1,6 +1,9 @@
 package dev.xiaoming.compose.example.speedcontrol
 
+import androidx.compose.animation.core.DecayAnimationSpec
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.AnchoredDraggableState
@@ -66,216 +69,266 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
 @Stable
-private class SpeedControlState(val initialValue: Int, val density: Density) {
-    var speed by mutableIntStateOf(initialValue)
-    val valueRange = 8..30
-    val lineGap = 48.dp
-    val lineGapPx = with(density) { lineGap.toPx() }
-    val lineWidth = 6.dp
-    val lineWidthPx = with(density) { lineWidth.toPx() }
+private class SpeedControlState(
+  val initialValue: Int,
+  val density: Density,
+  decayAnimationSpec: DecayAnimationSpec<Float>,
+  snapAnimationSpec: FiniteAnimationSpec<Float>
+) {
+  var speed by mutableIntStateOf(initialValue)
+  val valueRange = 8..30
+  val lineGap = 48.dp
+  val lineGapPx = with(density) { lineGap.toPx() }
+  val lineWidth = 6.dp
+  val lineWidthPx = with(density) { lineWidth.toPx() }
 
-    val draggableState =
-        AnchoredDraggableState(
-            initialValue = initialValue,
-            positionalThreshold = { totalDistance -> totalDistance * 0.1f },
-            velocityThreshold = { with(density) { 100.dp.toPx() } },
-            animationSpec = tween()
-        )
+  val draggableState =
+    AnchoredDraggableState(
+      initialValue = initialValue,
+      positionalThreshold = { totalDistance -> totalDistance * 0.1f },
+      velocityThreshold = { with(density) { 100.dp.toPx() } },
+      decayAnimationSpec = decayAnimationSpec,
+      snapAnimationSpec = snapAnimationSpec,
+    )
 
 
-    val currentValue by derivedStateOf {
-        with(draggableState) {
-            currentValue + (targetValue - currentValue) * progress
+  val currentValue by derivedStateOf {
+    with(draggableState) {
+      currentValue + (targetValue - currentValue) * progress(
+        targetValue,
+        currentValue
+      )
+    }
+  }
+
+  fun updateAnchors(size: IntSize) {
+    draggableState.updateAnchors(
+      DraggableAnchors {
+        valueRange.forEach { value ->
+          val offset =
+            size.width / 2f - lineGapPx * (value - valueRange.first)
+          value at offset
         }
-    }
+      }
+    )
+  }
 
-    fun updateAnchors(size: IntSize) {
-        draggableState.updateAnchors(
-            DraggableAnchors {
-                valueRange.forEach { value ->
-                    val offset =
-                        size.width / 2f - lineGapPx * (value - valueRange.first)
-                    value at offset
-                }
-            }
+
+  suspend fun animateTo(value: Int) {
+    draggableState.animateTo(value)
+    speed = value
+  }
+
+  companion object {
+    fun Saver(
+      snapAnimationSpec: FiniteAnimationSpec<Float>,
+      decayAnimationSpec: DecayAnimationSpec<Float>
+    ): Saver<SpeedControlState, *> = listSaver(
+      save = {
+        listOf(
+          it.speed.toFloat(),
+          it.density.density,
+          it.density.fontScale
         )
-    }
-
-
-    suspend fun animateTo(value: Int) {
-        draggableState.animateTo(value)
-        speed = value
-    }
-
-    companion object {
-        val Saver: Saver<SpeedControlState, *> = listSaver(
-            save = { listOf(it.speed.toFloat(), it.density.density, it.density.fontScale) },
-            restore = {
-                val initialValue = it[0].toInt()
-                SpeedControlState(initialValue = initialValue, density = Density(it[1], it[2]))
-            }
+      },
+      restore = {
+        val initialValue = it[0].toInt()
+        SpeedControlState(
+          initialValue = initialValue,
+          density = Density(it[1], it[2]),
+          snapAnimationSpec = snapAnimationSpec,
+          decayAnimationSpec = decayAnimationSpec
         )
-    }
+      }
+    )
+  }
 }
 
 @Composable
-private fun rememberSpeedControlState(initialValue: Int, density: Density): SpeedControlState {
-    return rememberSaveable(saver = SpeedControlState.Saver) {
-        SpeedControlState(initialValue = initialValue, density = density)
-    }
+private fun rememberSpeedControlState(
+  initialValue: Int,
+  density: Density,
+  snapAnimationSpec: FiniteAnimationSpec<Float> = tween(),
+  decayAnimationSpec: DecayAnimationSpec<Float> = rememberSplineBasedDecay(),
+): SpeedControlState {
+  return rememberSaveable(
+    saver = SpeedControlState.Saver(
+      snapAnimationSpec = snapAnimationSpec,
+      decayAnimationSpec = decayAnimationSpec
+    )
+  ) {
+    SpeedControlState(
+      initialValue = initialValue,
+      density = density,
+      snapAnimationSpec = snapAnimationSpec,
+      decayAnimationSpec = decayAnimationSpec
+    )
+  }
 }
 
 @Composable
 fun SpeedControl(modifier: Modifier = Modifier) {
-    val coroutineScope = rememberCoroutineScope()
-    val state = rememberSpeedControlState(initialValue = 10, density = LocalDensity.current)
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Padding.large),
+  val coroutineScope = rememberCoroutineScope()
+  val state =
+    rememberSpeedControlState(initialValue = 10, density = LocalDensity.current)
+  Column(
+    modifier = modifier,
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.spacedBy(Padding.large),
+  ) {
+    SpeedDial(state = state)
+    val presets = listOf(8, 10, 16, 20, 30)
+    Row(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.SpaceAround
     ) {
-        SpeedDial(state = state)
-        val presets = listOf(8, 10, 16, 20, 30)
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-            presets.forEach { value ->
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            state.animateTo(value = value)
-                        }
-                    },
-                ) {
-                    Text(
-                        text = formatSpeed(value),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Set speed to ${value / 10f}"
-                        }
-                    )
-                }
+      presets.forEach { value ->
+        Button(
+          onClick = {
+            coroutineScope.launch {
+              state.animateTo(value = value)
             }
+          },
+        ) {
+          Text(
+            text = formatSpeed(value),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.semantics {
+              contentDescription = "Set speed to ${value / 10f}"
+            }
+          )
         }
+      }
     }
+  }
 }
 
 @OptIn(ExperimentalFoundationApi::class, FlowPreview::class)
 @Composable
 private fun SpeedDial(state: SpeedControlState, modifier: Modifier = Modifier) {
-    val coroutineScope = rememberCoroutineScope()
-    val color = LocalContentColor.current
-    val speed = state.speed
-    val draggableState = state.draggableState
-    val hapticFeedback = LocalHapticFeedback.current
-    LaunchedEffect(draggableState) {
-        val valueFlow = snapshotFlow { draggableState.anchors.closestAnchor(draggableState.offset) }
-            .filterNotNull()
+  val coroutineScope = rememberCoroutineScope()
+  val color = LocalContentColor.current
+  val speed = state.speed
+  val draggableState = state.draggableState
+  val hapticFeedback = LocalHapticFeedback.current
+  LaunchedEffect(draggableState) {
+    val valueFlow =
+      snapshotFlow { draggableState.anchors.closestAnchor(draggableState.offset) }
+        .filterNotNull()
 
-        launch {
-            valueFlow.collect {
-                state.speed = it
-            }
-        }
+    launch {
+      valueFlow.collect {
+        state.speed = it
+      }
+    }
 
-        launch {
-            valueFlow.debounce(timeoutMillis = 100)
-                .collect {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                }
+    launch {
+      valueFlow.debounce(timeoutMillis = 100)
+        .collect {
+          hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
-    Column(
-        modifier = modifier
-            .progressSemantics(
-                value = speed.toFloat(),
-                valueRange = 8f..30f,
-                steps = 23
-            )
-            .semantics {
-                setProgress { targetValue ->
-                    val newValue = targetValue
-                        .roundToInt()
-                        .coerceIn(state.valueRange)
-                    if (newValue == speed) {
-                        false
-                    } else {
-                        coroutineScope.launch {
-                            draggableState.snapTo(newValue)
-                        }
-                        true
-                    }
-                }
+  }
+  Column(
+    modifier = modifier
+      .progressSemantics(
+        value = speed.toFloat(),
+        valueRange = 8f..30f,
+        steps = 23
+      )
+      .semantics {
+        setProgress { targetValue ->
+          val newValue = targetValue
+            .roundToInt()
+            .coerceIn(state.valueRange)
+          if (newValue == speed) {
+            false
+          } else {
+            coroutineScope.launch {
+              draggableState.snapTo(newValue)
             }
-            .clearAndSetSemantics {
-                stateDescription = "speed ${speed / 10f}"
-            },
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = formatSpeed(speed),
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold
+            true
+          }
+        }
+      }
+      .clearAndSetSemantics {
+        stateDescription = "speed ${speed / 10f}"
+      },
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    Text(
+      text = formatSpeed(speed),
+      style = MaterialTheme.typography.displaySmall,
+      fontWeight = FontWeight.Bold
+    )
+    Triangle()
+    Canvas(
+      modifier = Modifier
+        .padding(vertical = Padding.large)
+        .fillMaxWidth()
+        .height(96.dp)
+        .onSizeChanged { size -> state.updateAnchors(size = size) }
+        .anchoredDraggable(
+          state = draggableState,
+          orientation = Orientation.Horizontal,
+          reverseDirection = false,
         )
-        Triangle()
-        Canvas(
-            modifier = Modifier
-                .padding(vertical = Padding.large)
-                .fillMaxWidth()
-                .height(96.dp)
-                .onSizeChanged { size -> state.updateAnchors(size = size) }
-                .anchoredDraggable(state = draggableState, orientation = Orientation.Horizontal)
-        ) {
-            var start = 0f
-            for (v in state.valueRange) {
-                val distance = (v - state.currentValue).absoluteValue.coerceAtMost(4f)
-                val scale = (1f - (distance / 4f)).coerceAtLeast(0.4f)
-                val height = size.height * scale
-                val startOffset =
-                    Offset(
-                        x = start + draggableState.requireOffset(),
-                        y = (size.height - height) / 2
-                    )
-                drawLine(
-                    color = color.copy(alpha = scale),
-                    start = startOffset,
-                    end = startOffset.copy(y = startOffset.y + height),
-                    strokeWidth = state.lineWidthPx,
-                    cap = StrokeCap.Round,
-                )
-                start += state.lineGapPx
-            }
-        }
+    ) {
+      var start = 0f
+      for (v in state.valueRange) {
+        val distance = (v - state.currentValue).absoluteValue.coerceAtMost(4f)
+        val scale = (1f - (distance / 4f)).coerceAtLeast(0.4f)
+        val height = size.height * scale
+        val startOffset =
+          Offset(
+            x = start + draggableState.requireOffset(),
+            y = (size.height - height) / 2
+          )
+        drawLine(
+          color = color.copy(alpha = scale),
+          start = startOffset,
+          end = startOffset.copy(y = startOffset.y + height),
+          strokeWidth = state.lineWidthPx,
+          cap = StrokeCap.Round,
+        )
+        start += state.lineGapPx
+      }
     }
+  }
 }
 
 private fun formatSpeed(value: Int): String =
-    String.format(locale = null, format = "%.1f", value / 10f)
+  String.format(locale = null, format = "%.1f", value / 10f)
 
 @Composable
-private fun Triangle(modifier: Modifier = Modifier, color: Color = LocalContentColor.current) {
-    Canvas(
-        modifier = modifier
-            .width(20.dp)
-            .aspectRatio(ratio = 1.1547f)
-    ) {
-        val path = Path().apply {
-            moveTo(x = center.x, y = size.height)
-            lineTo(x = size.width, y = 0f)
-            lineTo(x = 0f, y = 0f)
-            lineTo(x = center.x, y = size.height)
-            close()
-        }
-        drawPath(path = path, color = color, style = Fill)
+private fun Triangle(
+  modifier: Modifier = Modifier,
+  color: Color = LocalContentColor.current
+) {
+  Canvas(
+    modifier = modifier
+      .width(20.dp)
+      .aspectRatio(ratio = 1.1547f)
+  ) {
+    val path = Path().apply {
+      moveTo(x = center.x, y = size.height)
+      lineTo(x = size.width, y = 0f)
+      lineTo(x = 0f, y = 0f)
+      lineTo(x = center.x, y = size.height)
+      close()
     }
+    drawPath(path = path, color = color, style = Fill)
+  }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun SpeedControlPreview() {
-    ExamplePreview {
-        SpeedControl(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Padding.medium)
-        )
-    }
+  ExamplePreview {
+    SpeedControl(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(Padding.medium)
+    )
+  }
 }
