@@ -35,13 +35,23 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.xiaoming.compose.example.speedcontrol.SpeedControl
+import dev.xiaoming.compose.example.swipeable.Swipeable
 import dev.xiaoming.compose.example.ui.theme.ComposeexamplesTheme
 import dev.xiaoming.compose.example.ui.theme.Padding
 
 enum class ExampleItem(val title: String, val composable: @Composable () -> Unit) {
   SPEED_CONTROL(
     title = "Speed Control",
-    composable = { SpeedControl(modifier = Modifier.padding(vertical = Padding.large)) })
+    composable = {
+      SpeedControl(modifier = Modifier.padding(vertical = Padding.large))
+    }
+  ),
+  SWIPEABLE(
+    title = "Swipeable",
+    composable = {
+      Swipeable()
+    }
+  )
 }
 
 class MainActivity : ComponentActivity() {
