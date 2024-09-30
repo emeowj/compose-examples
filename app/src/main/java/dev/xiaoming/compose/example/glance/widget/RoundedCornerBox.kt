@@ -1,4 +1,4 @@
-package dev.xiaoming.compose.example.glance
+package dev.xiaoming.compose.example.glance.widget
 
 import android.os.Build
 import androidx.compose.runtime.Composable

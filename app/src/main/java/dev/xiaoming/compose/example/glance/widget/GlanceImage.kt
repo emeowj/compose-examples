@@ -18,6 +18,8 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.layout.ContentScale
+import androidx.glance.layout.fillMaxSize
 import coil.imageLoader
 import coil.request.ErrorResult
 import coil.request.ImageRequest
@@ -75,7 +77,12 @@ fun GlanceImage(
 
     RoundedCornerBox(modifier = modifier, cornerRadius = cornerRadius) {
         image?.let {
-            Image(provider = ImageProvider(it), contentDescription = contentDescription)
+            Image(
+                provider = ImageProvider(it),
+                contentDescription = contentDescription,
+                modifier = GlanceModifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
         }
     }
 }

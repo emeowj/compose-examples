@@ -1,6 +1,7 @@
-package dev.xiaoming.compose.example.glance
+package dev.xiaoming.compose.example.glance.widget
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -13,10 +14,13 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.components.CircleIconButton
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.getAppWidgetState
+import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
@@ -32,6 +36,9 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import dev.xiaoming.compose.example.R
+import dev.xiaoming.compose.example.glance.GlanceWidgetReceiver
+import dev.xiaoming.compose.example.glance.TrackInfo
+import dev.xiaoming.compose.example.glance.Tracks
 import kotlinx.serialization.Serializable
 
 class NowPlayingWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -39,22 +46,44 @@ class NowPlayingWidgetReceiver : GlanceAppWidgetReceiver() {
 }
 
 @Serializable
-data class TrackInfo(val id: Int, val title: String, val coverUrl: String)
-
-@Serializable
 data class NowPlayingTrack(val info: TrackInfo? = null, val isPlaying: Boolean = false)
 
 
 class NowPlayingWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Exact
+
     override var stateDefinition = JsonStateDefinition(
         initialValue = NowPlayingTrack(),
         serializer = NowPlayingTrack.serializer()
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val initialState = initializeState(context = context, id = id)
         provideContent {
-            val state: NowPlayingTrack = currentState()
+            val state: NowPlayingTrack = currentState<NowPlayingTrack>().let {
+                if (it.info == null) initialState else it
+            }
             NowPlayingWidget(state = state)
+        }
+    }
+
+    private suspend fun initializeState(context: Context, id: GlanceId): NowPlayingTrack {
+        val state =
+            getAppWidgetState(context = context, definition = stateDefinition, glanceId = id)
+        return if (state.info == null) {
+            // Load the initial state and store it in the widget's data store, here we
+            // just use some sample data. In a real application, you might want to load data
+            // from the server or a local database.
+            val track = Tracks.tracks.first()
+            val newState = NowPlayingTrack(info = track, isPlaying = false)
+
+            // Also persist the update to the widget's data store
+            updateAppWidgetState(context = context, definition = stateDefinition, glanceId = id) {
+                newState
+            }
+            newState
+        } else {
+            state
         }
     }
 }
@@ -153,7 +182,10 @@ class PlayPauseAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
-        TODO("Not yet implemented")
+        val intent = Intent(context, GlanceWidgetReceiver::class.java).apply {
+            action = GlanceWidgetReceiver.ACTION_PLAY_PAUSE
+        }
+        context.sendBroadcast(intent)
     }
 }
 
@@ -164,6 +196,11 @@ class SeekAction : ActionCallback {
         parameters: ActionParameters
     ) {
         val next = parameters[PARAMETER_NEXT] ?: false
+        val intent = Intent(context, GlanceWidgetReceiver::class.java).apply {
+            action =
+                if (next) GlanceWidgetReceiver.ACTION_SEEK_NEXT else GlanceWidgetReceiver.ACTION_SEEK_PREVIOUS
+        }
+        context.sendBroadcast(intent)
     }
 
     companion object {

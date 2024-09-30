@@ -34,130 +34,137 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import dev.xiaoming.compose.example.glance.GlanceWidget
 import dev.xiaoming.compose.example.speedcontrol.SpeedControl
 import dev.xiaoming.compose.example.swipeable.Swipeable
 import dev.xiaoming.compose.example.ui.theme.ComposeexamplesTheme
 import dev.xiaoming.compose.example.ui.theme.Padding
 
 enum class ExampleItem(val title: String, val composable: @Composable () -> Unit) {
-  SPEED_CONTROL(
-    title = "Speed Control",
-    composable = {
-      SpeedControl(modifier = Modifier.padding(vertical = Padding.large))
-    }
-  ),
-  SWIPEABLE(
-    title = "Swipeable",
-    composable = {
-      Swipeable()
-    }
-  )
+    SPEED_CONTROL(
+        title = "Speed Control",
+        composable = {
+            SpeedControl(modifier = Modifier.padding(vertical = Padding.large))
+        }
+    ),
+    SWIPEABLE(
+        title = "Swipeable",
+        composable = {
+            Swipeable()
+        }
+    ),
+    GLANCE(
+        title = "Glance Widget",
+        composable = {
+            GlanceWidget()
+        }
+    )
 }
 
 class MainActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    enableEdgeToEdge()
-    setContent {
-      ComposeexamplesTheme {
-        val navController = rememberNavController()
-        NavHost(navController = navController, startDestination = "home") {
-          composable(route = "home") {
-            MainScreen(navController)
-          }
-          composable(
-            route = "example/{item}",
-            arguments = listOf(
-              navArgument("item") {
-                type = NavType.StringType
-                nullable = false
-              }
-            ),
-            enterTransition = { slideIntoContainer(towards = Start) },
-            exitTransition = { slideOutOfContainer(towards = End) }
-          ) { navBackStackEntry ->
-            val item = navBackStackEntry.arguments?.getString("item")?.let {
-              ExampleItem.valueOf(it)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            ComposeexamplesTheme {
+                val navController = rememberNavController()
+                NavHost(navController = navController, startDestination = "home") {
+                    composable(route = "home") {
+                        MainScreen(navController)
+                    }
+                    composable(
+                        route = "example/{item}",
+                        arguments = listOf(
+                            navArgument("item") {
+                                type = NavType.StringType
+                                nullable = false
+                            }
+                        ),
+                        enterTransition = { slideIntoContainer(towards = Start) },
+                        exitTransition = { slideOutOfContainer(towards = End) }
+                    ) { navBackStackEntry ->
+                        val item = navBackStackEntry.arguments?.getString("item")?.let {
+                            ExampleItem.valueOf(it)
+                        }
+                        ExampleScreen(item = item!!) {
+                            navController.navigateUp()
+                        }
+                    }
+                }
             }
-            ExampleScreen(item = item!!) {
-              navController.navigateUp()
-            }
-          }
         }
-      }
     }
-  }
 }
 
 @Composable
 private fun MainScreen(navHostController: NavHostController) {
-  Scaffold(
-    modifier = Modifier.fillMaxSize(),
-    topBar = {
-      CenterAlignedTopAppBar(
-        title = {
-          Text(text = "Compose Examples", style = MaterialTheme.typography.titleMedium)
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(text = "Compose Examples", style = MaterialTheme.typography.titleMedium)
+                }
+            )
         }
-      )
+    ) { innerPadding ->
+        LazyColumn(contentPadding = innerPadding) {
+            item {
+                HorizontalDivider()
+            }
+            items(items = ExampleItem.entries) { item ->
+                ListItem(
+                    headlineContent = {
+                        Text(text = item.title, style = MaterialTheme.typography.titleMedium)
+                    },
+                    modifier = Modifier.clickable {
+                        navHostController.navigate(route = "example/$item")
+                    }
+                )
+                HorizontalDivider()
+            }
+        }
     }
-  ) { innerPadding ->
-    LazyColumn(contentPadding = innerPadding) {
-      item {
-        HorizontalDivider()
-      }
-      items(items = ExampleItem.entries) { item ->
-        ListItem(
-          headlineContent = {
-            Text(text = item.title, style = MaterialTheme.typography.titleMedium)
-          },
-          modifier = Modifier.clickable {
-            navHostController.navigate(route = "example/$item")
-          }
-        )
-        HorizontalDivider()
-      }
-    }
-  }
 }
 
 @Composable
 private fun ExampleScreen(item: ExampleItem, navBack: () -> Unit) {
-  Scaffold(
-    modifier = Modifier.fillMaxSize(),
-    topBar = {
-      CenterAlignedTopAppBar(
-        title = {
-          Text(item.title, style = MaterialTheme.typography.titleMedium)
-        },
-        navigationIcon = {
-          IconButton(onClick = navBack) {
-            Icon(
-              imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-              contentDescription = "Nav Back"
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(item.title, style = MaterialTheme.typography.titleMedium)
+                },
+                navigationIcon = {
+                    IconButton(onClick = navBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = "Nav Back"
+                        )
+                    }
+                }
             )
-          }
         }
-      )
+    ) { contentPadding ->
+        Box(modifier = Modifier.padding(contentPadding)) {
+            item.composable()
+        }
     }
-  ) { contentPadding ->
-    Box(modifier = Modifier.padding(contentPadding)) {
-      item.composable()
-    }
-  }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun MainScreenPreview() {
-  ComposeexamplesTheme {
-    MainScreen(navHostController = rememberNavController())
-  }
+    ComposeexamplesTheme {
+        MainScreen(navHostController = rememberNavController())
+    }
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun ExampleScreenPreview() {
-  ComposeexamplesTheme {
-    ExampleScreen(ExampleItem.SPEED_CONTROL) { }
-  }
+    ComposeexamplesTheme {
+        ExampleScreen(ExampleItem.SPEED_CONTROL) { }
+    }
 }
