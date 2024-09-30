@@ -9,8 +9,14 @@
 /.idea/assetWizardSettings.xml
 /.idea/deploymentTargetSelector.xml
 /.idea/deploymentTargetDropDown.xml
+/.idea/other.xml
+/.idea/misc.xml
+/.idea/inspectionProfiles
 /.idea/appInsightsSettings.xml
+/.idea/studiobot.xml
+/.idea/runConfigurations.xml
 .DS_Store
+*.aab
 /build
 /captures
 .externalNativeBuild
