@@ -1,5 +1,6 @@
 package dev.xiaoming.compose.example.dial
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -8,9 +9,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitDragOrCancellation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.overscroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -48,11 +47,12 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -64,7 +64,6 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun <T> DialControl(
     options: List<T>,
@@ -78,15 +77,12 @@ fun <T> DialControl(
     }
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
-    var visible by remember { mutableStateOf(false) }
+    val isPreview = LocalInspectionMode.current
+    var visible by remember { mutableStateOf(isPreview) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val controlOffset = remember {
         Animatable(initialValue = Offset.Zero, Offset.VectorConverter)
     }
-
-    // TODO: figure out where to apply the overscroll
-    val overScrollEffect = ScrollableDefaults.overscrollEffect()
-
     val selectedOption by remember(density, config) {
         derivedStateOf {
             with(density) {
@@ -119,20 +115,14 @@ fun <T> DialControl(
                     while (change != null && change.pressed) {
                         change = awaitDragOrCancellation(change.id)?.also {
                             if (it.pressed) {
-                                overScrollEffect.applyToScroll(
-                                    delta = it.positionChange(),
-                                    source = NestedScrollSource.UserInput
-                                ) { delta ->
-                                    val origin = controlOffset.value
-                                    val target = origin + delta
-                                    val radius = config.size.toPx() / 2
-                                    val distance = target.getDistance()
-                                    val clamped =
-                                        if (distance > radius) target * radius / distance else target
-                                    coroutineScope.launch {
-                                        controlOffset.snapTo(clamped)
-                                    }
-                                    clamped - origin
+                                val origin = controlOffset.value
+                                val target = origin + it.positionChange()
+                                val radius = config.size.toPx() / 2
+                                val distance = target.getDistance()
+                                val clamped =
+                                    if (distance > radius) target * radius / distance else target
+                                coroutineScope.launch {
+                                    controlOffset.snapTo(clamped)
                                 }
                             }
                         }
@@ -154,11 +144,10 @@ fun <T> DialControl(
             CircleDial(
                 options = options,
                 selectedOption = selectedOption,
+                selectOption = onSelected,
                 optionContent = content,
                 config = config,
-                modifier = Modifier
-                    .overscroll(overScrollEffect)
-                    .padding(24.dp)
+                modifier = Modifier.padding(24.dp)
             ) {
                 Box(
                     modifier = Modifier
@@ -217,6 +206,7 @@ private fun <T> Density.calculateSelectedOption(
 private fun <T> CircleDial(
     options: List<T>,
     selectedOption: T?,
+    selectOption: (T) -> Unit,
     optionContent: @Composable (T) -> Unit,
     config: DialConfig,
     modifier: Modifier = Modifier,
@@ -296,19 +286,21 @@ private fun <T> CircleDial(
         options.forEachIndexed { index, option ->
 
             key(option) {
-                Box(modifier = Modifier
-                    .graphicsLayer {
-                        val scale = scales[option]!!.value / config.unselectedScale
-                        val startAngle = calculateStartAngle(index = index, size = options.size)
-                        val radians = (startAngle + sweep / 2) * Math.PI / 180
-                        val radius =
-                            (config.size.toPx() / 2) * (config.cutoffFraction + (1f - config.cutoffFraction) / 2)
-                        translationX = (radius * cos(radians)).toFloat()
-                        translationY = (radius * sin(radians)).toFloat()
-                        scaleX = scale
-                        scaleY = scale
-                    }
-                    .size(24.dp)
+                Box(
+                    modifier = Modifier
+                        .clickable { selectOption(option) }
+                        .graphicsLayer {
+                            val scale = scales[option]!!.value / config.unselectedScale
+                            val startAngle = calculateStartAngle(index = index, size = options.size)
+                            val radians = (startAngle + sweep / 2) * Math.PI / 180
+                            val radius =
+                                (config.size.toPx() / 2) * (config.cutoffFraction + (1f - config.cutoffFraction) / 2)
+                            translationX = (radius * cos(radians)).toFloat()
+                            translationY = (radius * sin(radians)).toFloat()
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                        .size(24.dp)
                 ) {
                     optionContent(option)
                 }
@@ -326,34 +318,26 @@ enum class DialRegion(val icon: ImageVector) {
     TOP_LEFT(icon = Icons.Rounded.AddLocationAlt);
 }
 
+@Composable
+fun DialControlExample(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    DialControl(
+        options = DialRegion.entries,
+        onSelected = {
+            Toast.makeText(context, it.name, Toast.LENGTH_SHORT).show()
+        },
+        modifier = modifier
+            .fillMaxSize()
+            .background(color = MaterialTheme.colorScheme.surfaceContainerLowest),
+    ) { region ->
+        Icon(imageVector = region.icon, contentDescription = null)
+    }
+}
+
 @Preview
 @Composable
-private fun DialControlPreview() {
+fun DialControlPreview() {
     ExamplePreview {
-        Box(
-            modifier = Modifier
-                .size(400.dp)
-                .background(color = MaterialTheme.colorScheme.surfaceContainerLowest),
-            contentAlignment = Alignment.Center
-        ) {
-            CircleDial(
-                options = DialRegion.entries,
-                selectedOption = null,
-                optionContent = { region ->
-                    Icon(imageVector = region.icon, contentDescription = null)
-                },
-                config = DialConfig(size = 280.dp, cutoffFraction = 0.4f),
-                background = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.onSurface,
-                            shape = CircleShape
-                        )
-                )
-            }
-        }
+        DialControlExample()
     }
 }
