@@ -3,6 +3,7 @@
 package dev.xiaoming.compose.example
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,6 +17,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AddLocation
+import androidx.compose.material.icons.rounded.Brush
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -27,6 +33,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -34,6 +41,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import dev.xiaoming.compose.example.dial.DialControl
 import dev.xiaoming.compose.example.glance.GlanceWidget
 import dev.xiaoming.compose.example.speedcontrol.SpeedControl
 import dev.xiaoming.compose.example.swipeable.Swipeable
@@ -57,6 +65,26 @@ enum class ExampleItem(val title: String, val composable: @Composable () -> Unit
         title = "Glance Widget",
         composable = {
             GlanceWidget()
+        }
+    ),
+    DIAL(
+        title = "Dial",
+        composable = {
+            val context = LocalContext.current
+            DialControl(
+                options = listOf(
+                    "Brush" to Icons.Rounded.Brush,
+                    "Palette" to Icons.Rounded.Palette,
+                    "Add Location" to Icons.Rounded.AddLocation,
+                    "Delete" to Icons.Rounded.Delete,
+                    "Share" to Icons.Rounded.Share
+                ),
+                onSelected = { option ->
+                    Toast.makeText(context, option.first, Toast.LENGTH_SHORT).show()
+                },
+            ) { option ->
+                Icon(imageVector = option.second, contentDescription = option.first)
+            }
         }
     )
 }
