@@ -16,8 +16,9 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.overscroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -55,16 +56,13 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.xiaoming.compose.example.ExamplePreview
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.roundToInt
 import kotlin.math.sin
-
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -158,12 +156,16 @@ fun <T> DialControl(
                 selectedOption = selectedOption,
                 optionContent = content,
                 config = config,
+                modifier = Modifier
+                    .overscroll(overScrollEffect)
+                    .padding(24.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .offset {
-                            controlOffset.value.run {
-                                IntOffset(x = x.roundToInt(), y = y.roundToInt())
+                        .graphicsLayer {
+                            controlOffset.value.let {
+                                translationX = it.x
+                                translationY = it.y
                             }
                         }
                         .size(24.dp)
