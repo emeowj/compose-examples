@@ -72,7 +72,7 @@ class DialControlState<T>(
         visible = false
         selectedOption?.let(onSelected)
         coroutineScope.launch {
-            indicatorOffset.snapTo(Offset.Zero)
+            indicatorOffset.animateTo(Offset.Zero)
         }
     }
 
