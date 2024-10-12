@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitDragOrCancellation
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -33,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
@@ -54,15 +54,18 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.xiaoming.compose.example.ExamplePreview
+import dev.xiaoming.compose.example.R
 import dev.xiaoming.compose.example.dial.DialControlState.Companion.calculateStartAngle
 import dev.xiaoming.compose.example.ui.theme.Padding
 import kotlinx.coroutines.CoroutineScope
@@ -352,7 +355,7 @@ fun DialControlExample(modifier: Modifier = Modifier) {
         state.updateOptions(options = DialRegion.entries, enabledOptions = DialRegion.entries)
         DialControl(
             state = state,
-            modifier = Modifier.size(400.dp),
+            modifier = Modifier.fillMaxSize(),
             dialContent = { region ->
                 val selected = region == state.selectedOption
                 IconButton(
@@ -371,15 +374,12 @@ fun DialControlExample(modifier: Modifier = Modifier) {
                 }
             }
         ) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f))
-                    .padding(Padding.large)
-                    .align(Alignment.TopCenter)
-            ) {
-                Text(text = "selected: ${state.selectedOption}")
-            }
+            Image(
+                painter = painterResource(R.drawable.image_unsplash),
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop
+            )
         }
     }
 }

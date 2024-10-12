@@ -18,9 +18,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -416,9 +414,7 @@ private fun StepThreePreview() {
             onSelected = {
                 selectedOption = it.name
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
+            modifier = Modifier.fillMaxSize()
         ) {
             Image(
                 painter = painterResource(R.drawable.image_unsplash),
@@ -427,13 +423,15 @@ private fun StepThreePreview() {
                 contentScale = ContentScale.Crop
             )
 
-            Text(
-                text = "$selectedOption",
-                style = MaterialTheme.typography.displaySmall,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .offset(y = 24.dp)
-            )
+            selectedOption?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.displaySmall,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(y = 24.dp)
+                )
+            }
         }
     }
 }
